@@ -295,11 +295,14 @@ export default async function handler(req, res) {
       };
       await video.save();
 
-      // Start processing
-      processVideoAsync(video._id.toString(), req.user.organization).catch(console.error);
+      // Start processing - MUST be synchronous in serverless environment
+      // Otherwise the function execution context ends and kills the background process
+      console.log('Starting synchronous video processing...');
+      await processVideoAsync(video._id.toString(), req.user.organization);
+      console.log('Video processing completed');
 
       return res.json({
-        message: 'Upload complete',
+        message: 'Upload complete and processed',
         video: {
           id: video._id,
           status: video.status
