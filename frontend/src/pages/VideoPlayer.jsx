@@ -93,8 +93,9 @@ const VideoPlayer = () => {
                 Your browser does not support the video tag.
               </video>
             ) : (
-              <div className="alert alert-info">
-                Loading video...
+              <div className="alert alert-error">
+                This video was uploaded to local storage and cannot be played in the cloud deployment.
+                Please upload a new video to play it online.
               </div>
             )}
             {error && (
