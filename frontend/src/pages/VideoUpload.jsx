@@ -76,19 +76,32 @@ const VideoUpload = () => {
     setProcessingProgress(0);
 
     try {
+      console.log('Starting file upload...', { name: file.name, size: file.size, type: file.type });
+
       // Convert file to base64 for serverless upload
       const reader = new FileReader();
 
       const fileData = await new Promise((resolve, reject) => {
+        reader.onprogress = (e) => {
+          if (e.lengthComputable) {
+            const progress = Math.round((e.loaded / e.total) * 50);
+            setUploadProgress(progress);
+          }
+        };
         reader.onload = () => {
           const base64 = reader.result.split(',')[1]; // Remove data:video/...;base64, prefix
+          console.log('File converted to base64, length:', base64.length);
           resolve(base64);
         };
-        reader.onerror = reject;
+        reader.onerror = (error) => {
+          console.error('FileReader error:', error);
+          reject(error);
+        };
         reader.readAsDataURL(file);
       });
 
       setUploadProgress(50); // File read complete
+      console.log('Sending upload request...');
 
       const response = await axios.post('/api/videos/upload', {
         buffer: fileData,
@@ -103,16 +116,20 @@ const VideoUpload = () => {
           const percentCompleted = Math.round(
             50 + (progressEvent.loaded * 50) / progressEvent.total
           );
+          console.log('Upload progress:', percentCompleted + '%');
           setUploadProgress(percentCompleted);
         }
       });
 
+      console.log('Upload response:', response.data);
       setVideoId(response.data.video.id);
       setSuccess('Video uploaded successfully! Processing...');
       setUploading(false);
     } catch (error) {
       console.error('Upload error:', error);
-      setError(error.response?.data?.message || 'Upload failed');
+      console.error('Error response:', error.response);
+      console.error('Error data:', error.response?.data);
+      setError(error.response?.data?.message || error.message || 'Upload failed');
       setUploading(false);
     }
   };
