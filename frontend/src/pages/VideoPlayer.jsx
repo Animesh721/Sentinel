@@ -18,15 +18,20 @@ const VideoPlayer = () => {
     try {
       const response = await axios.get(`/api/videos/${id}`);
       const videoData = response.data.video;
+      console.log('Video data received:', videoData);
       setVideo(videoData);
 
       // If video is completed, use Cloudinary URL directly
       if (videoData.status === 'completed' && videoData.cloudinaryUrl) {
+        console.log('Setting video URL:', videoData.cloudinaryUrl);
         setVideoUrl(videoData.cloudinaryUrl);
+      } else {
+        console.log('Video not ready:', { status: videoData.status, hasUrl: !!videoData.cloudinaryUrl });
       }
     } catch (error) {
+      console.error('Error fetching video:', error);
+      console.error('Error response:', error.response);
       setError(error.response?.data?.message || 'Failed to load video');
-      console.error(error);
     } finally {
       setLoading(false);
     }
