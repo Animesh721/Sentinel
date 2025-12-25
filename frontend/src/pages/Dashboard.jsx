@@ -22,36 +22,41 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (socket) {
-      socket.on('video:progress', (data) => {
+    const socketData = socket;
+    if (socketData?.channel) {
+      const handleProgress = (data) => {
         setVideos(prev => prev.map(video =>
           video._id === data.videoId
             ? { ...video, processingProgress: data.progress, status: data.status }
             : video
         ));
-      });
+      };
 
-      socket.on('video:complete', (data) => {
+      const handleComplete = (data) => {
         setVideos(prev => prev.map(video =>
           video._id === data.videoId
             ? { ...video, status: 'completed', sensitivityStatus: data.sensitivityStatus, processingProgress: 100 }
             : video
         ));
         fetchVideos(); // Refresh to get updated stats
-      });
+      };
 
-      socket.on('video:error', (data) => {
+      const handleError = (data) => {
         setVideos(prev => prev.map(video =>
           video._id === data.videoId
             ? { ...video, status: 'failed' }
             : video
         ));
-      });
+      };
+
+      socketData.channel.bind('video:progress', handleProgress);
+      socketData.channel.bind('video:complete', handleComplete);
+      socketData.channel.bind('video:error', handleError);
 
       return () => {
-        socket.off('video:progress');
-        socket.off('video:complete');
-        socket.off('video:error');
+        socketData.channel.unbind('video:progress', handleProgress);
+        socketData.channel.unbind('video:complete', handleComplete);
+        socketData.channel.unbind('video:error', handleError);
       };
     }
   }, [socket]);
