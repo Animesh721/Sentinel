@@ -97,6 +97,14 @@ const VideoUpload = () => {
       formData.append('public_id', publicId);
 
       const cloudinaryResponse = await axios.post(uploadUrl, formData, {
+        headers: {
+          'Authorization': undefined  // Remove auth header for Cloudinary
+        },
+        transformRequest: [(data, headers) => {
+          delete headers.common['Authorization'];  // Remove global auth header
+          delete headers.Authorization;
+          return data;
+        }],
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
             (progressEvent.loaded * 100) / progressEvent.total
