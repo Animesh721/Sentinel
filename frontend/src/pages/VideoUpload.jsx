@@ -101,8 +101,13 @@ const VideoUpload = () => {
           'Authorization': undefined  // Remove auth header for Cloudinary
         },
         transformRequest: [(data, headers) => {
-          delete headers.common['Authorization'];  // Remove global auth header
-          delete headers.Authorization;
+          // Remove Authorization headers that might be set globally
+          if (headers && headers.common) {
+            delete headers.common['Authorization'];
+          }
+          if (headers) {
+            delete headers['Authorization'];
+          }
           return data;
         }],
         onUploadProgress: (progressEvent) => {
