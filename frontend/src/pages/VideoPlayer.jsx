@@ -10,7 +10,10 @@ const VideoPlayer = () => {
   const [error, setError] = useState('');
   const [videoUrl, setVideoUrl] = useState(null);
 
+  console.log('VideoPlayer component mounted with id:', id);
+
   useEffect(() => {
+    console.log('useEffect triggered, fetching video...');
     fetchVideo();
   }, [id]);
 
