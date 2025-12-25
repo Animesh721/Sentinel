@@ -30,77 +30,125 @@ async function parseBody(req) {
 
 async function processVideoAsync(videoId, organization) {
   try {
+    console.log(`🎬 Starting video processing for ${videoId}`);
+
     const video = await Video.findById(videoId);
     if (!video) {
       console.error(`Video ${videoId} not found`);
       return;
     }
 
+    console.log(`📹 Video found:`, {
+      id: videoId,
+      cloudinaryUrl: video.cloudinaryUrl,
+      status: video.status
+    });
+
     video.status = 'processing';
     video.processingProgress = 10;
     await video.save();
+    console.log(`💾 Video status updated to processing (10%)`);
 
-    await emitVideoProgress(organization, {
-      videoId: video._id.toString(),
-      progress: 10,
-      status: 'processing'
-    });
+    try {
+      await emitVideoProgress(organization, {
+        videoId: video._id.toString(),
+        progress: 10,
+        status: 'processing'
+      });
+      console.log(`📡 Emitted progress 10%`);
+    } catch (pusherError) {
+      console.warn(`⚠️ Pusher emit failed (non-critical):`, pusherError.message);
+    }
 
     video.processingProgress = 50;
     await video.save();
+    console.log(`💾 Progress updated to 50%`);
 
-    await emitVideoProgress(organization, {
-      videoId: video._id.toString(),
-      progress: 50,
-      status: 'processing'
-    });
+    try {
+      await emitVideoProgress(organization, {
+        videoId: video._id.toString(),
+        progress: 50,
+        status: 'processing'
+      });
+      console.log(`📡 Emitted progress 50%`);
+    } catch (pusherError) {
+      console.warn(`⚠️ Pusher emit failed (non-critical):`, pusherError.message);
+    }
 
     video.processingProgress = 70;
     await video.save();
+    console.log(`💾 Progress updated to 70%`);
 
-    await emitVideoProgress(organization, {
-      videoId: video._id.toString(),
-      progress: 70,
-      status: 'analyzing'
-    });
+    try {
+      await emitVideoProgress(organization, {
+        videoId: video._id.toString(),
+        progress: 70,
+        status: 'analyzing'
+      });
+      console.log(`📡 Emitted progress 70%`);
+    } catch (pusherError) {
+      console.warn(`⚠️ Pusher emit failed (non-critical):`, pusherError.message);
+    }
 
+    console.log(`🔍 Starting sensitivity analysis...`);
     const sensitivityStatus = await analyzeSensitivity(video.cloudinaryUrl);
+    console.log(`✅ Sensitivity analysis complete:`, sensitivityStatus);
+
     video.sensitivityStatus = sensitivityStatus;
     video.processingProgress = 90;
     await video.save();
+    console.log(`💾 Progress updated to 90%`);
 
-    await emitVideoProgress(organization, {
-      videoId: video._id.toString(),
-      progress: 90,
-      status: 'finalizing'
-    });
+    try {
+      await emitVideoProgress(organization, {
+        videoId: video._id.toString(),
+        progress: 90,
+        status: 'finalizing'
+      });
+      console.log(`📡 Emitted progress 90%`);
+    } catch (pusherError) {
+      console.warn(`⚠️ Pusher emit failed (non-critical):`, pusherError.message);
+    }
 
     video.status = 'completed';
     video.processingProgress = 100;
     await video.save();
+    console.log(`💾 Video status updated to completed (100%)`);
 
-    await emitVideoComplete(organization, {
-      videoId: video._id.toString(),
-      status: 'completed',
-      sensitivityStatus: video.sensitivityStatus,
-      progress: 100
-    });
+    try {
+      await emitVideoComplete(organization, {
+        videoId: video._id.toString(),
+        status: 'completed',
+        sensitivityStatus: video.sensitivityStatus,
+        progress: 100
+      });
+      console.log(`📡 Emitted completion event`);
+    } catch (pusherError) {
+      console.warn(`⚠️ Pusher emit failed (non-critical):`, pusherError.message);
+    }
 
     console.log(`✅ Video ${videoId} processed successfully`);
   } catch (error) {
     console.error(`❌ Error processing video ${videoId}:`, error);
+    console.error(`❌ Error stack:`, error.stack);
 
     try {
       const video = await Video.findById(videoId);
       if (video) {
         video.status = 'failed';
         await video.save();
+        console.log(`💾 Video status updated to failed`);
 
-        await emitVideoError(organization, {
-          videoId: video._id.toString(),
-          status: 'failed',
-          error: error.message
-        });
+        try {
+          await emitVideoError(organization, {
+            videoId: video._id.toString(),
+            status: 'failed',
+            error: error.message
+          });
+          console.log(`📡 Emitted error event`);
+        } catch (pusherError) {
+          console.warn(`⚠️ Pusher error emit failed:`, pusherError.message);
+        }
       }
     } catch (saveError) {
       console.error('Failed to update video status:', saveError);
