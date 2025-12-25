@@ -19,16 +19,10 @@ const VideoPlayer = () => {
       const response = await axios.get(`/api/videos/${id}`);
       const videoData = response.data.video;
       setVideo(videoData);
-      
-      // If video is completed, create streaming URL with auth token
-      if (videoData.status === 'completed') {
-        // Get auth token from axios defaults or localStorage
-        const token = axios.defaults.headers.common['Authorization']?.replace('Bearer ', '') || localStorage.getItem('token');
-        
-        // Create URL with token for video streaming (HTML5 video doesn't send auth headers)
-        // For production, consider using a more secure method like signed URLs
-        const streamUrl = `/api/videos/${id}/stream${token ? `?token=${token}` : ''}`;
-        setVideoUrl(streamUrl);
+
+      // If video is completed, use Cloudinary URL directly
+      if (videoData.status === 'completed' && videoData.cloudinaryUrl) {
+        setVideoUrl(videoData.cloudinaryUrl);
       }
     } catch (error) {
       setError(error.response?.data?.message || 'Failed to load video');
