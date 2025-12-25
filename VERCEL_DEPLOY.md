@@ -39,21 +39,21 @@ Add these variables for **Production, Preview, and Development**:
 | `MONGODB_URI` | Your MongoDB Atlas connection string |
 | `JWT_SECRET` | Generate a secure 32+ character string |
 | `JWT_EXPIRE` | `7d` |
-| `CLOUDINARY_CLOUD_NAME` | `dxsfmzbqf` |
-| `CLOUDINARY_API_KEY` | `736436267281446` |
-| `CLOUDINARY_API_SECRET` | `AQYRr2RDUy8yaFWav39ccV-hbTw` |
-| `PUSHER_APP_ID` | `2095203` |
-| `PUSHER_KEY` | `b19873f36faedd774331` |
-| `PUSHER_SECRET` | `0935d7983bd261e5d8b8` |
-| `PUSHER_CLUSTER` | `ap2` |
+| `CLOUDINARY_CLOUD_NAME` | From Cloudinary dashboard |
+| `CLOUDINARY_API_KEY` | From Cloudinary dashboard |
+| `CLOUDINARY_API_SECRET` | From Cloudinary dashboard |
+| `PUSHER_APP_ID` | From Pusher App Keys tab |
+| `PUSHER_KEY` | From Pusher App Keys tab |
+| `PUSHER_SECRET` | From Pusher App Keys tab |
+| `PUSHER_CLUSTER` | From Pusher App Keys tab (e.g., `us2`, `eu`, `ap2`) |
 | `FRONTEND_URL` | `https://your-app.vercel.app` (update after first deploy) |
 
 #### Required Frontend Variables:
 
 | Variable | Value |
 |----------|-------|
-| `VITE_PUSHER_KEY` | `b19873f36faedd774331` |
-| `VITE_PUSHER_CLUSTER` | `ap2` |
+| `VITE_PUSHER_KEY` | Same as `PUSHER_KEY` above |
+| `VITE_PUSHER_CLUSTER` | Same as `PUSHER_CLUSTER` above |
 
 ### Step 3: Generate JWT_SECRET
 
