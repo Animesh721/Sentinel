@@ -170,13 +170,16 @@ export default async function handler(req, res) {
         });
       });
 
-      const contentType = req.headers['content-type'];
-      if (!contentType || !contentType.includes('multipart/form-data')) {
-        return res.status(400).json({ message: 'Content-Type must be multipart/form-data' });
-      }
-
       const body = await parseBody(req);
       const { buffer, originalName, mimeType, size } = body;
+
+      console.log('Upload request received:', {
+        hasBuffer: !!buffer,
+        originalName,
+        mimeType,
+        size,
+        bufferLength: buffer?.length
+      });
 
       if (!buffer || !originalName) {
         return res.status(400).json({ message: 'File data is required' });

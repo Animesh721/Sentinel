@@ -75,17 +75,33 @@ const VideoUpload = () => {
     setUploadProgress(0);
     setProcessingProgress(0);
 
-    const formData = new FormData();
-    formData.append('video', file);
-
     try {
-      const response = await axios.post('/api/videos/upload', formData, {
+      // Convert file to base64 for serverless upload
+      const reader = new FileReader();
+
+      const fileData = await new Promise((resolve, reject) => {
+        reader.onload = () => {
+          const base64 = reader.result.split(',')[1]; // Remove data:video/...;base64, prefix
+          resolve(base64);
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+
+      setUploadProgress(50); // File read complete
+
+      const response = await axios.post('/api/videos/upload', {
+        buffer: fileData,
+        originalName: file.name,
+        mimeType: file.type,
+        size: file.size
+      }, {
         headers: {
-          'Content-Type': 'multipart/form-data'
+          'Content-Type': 'application/json'
         },
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
-            (progressEvent.loaded * 100) / progressEvent.total
+            50 + (progressEvent.loaded * 50) / progressEvent.total
           );
           setUploadProgress(percentCompleted);
         }
@@ -95,6 +111,7 @@ const VideoUpload = () => {
       setSuccess('Video uploaded successfully! Processing...');
       setUploading(false);
     } catch (error) {
+      console.error('Upload error:', error);
       setError(error.response?.data?.message || 'Upload failed');
       setUploading(false);
     }
