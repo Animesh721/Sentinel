@@ -81,4 +81,9 @@ videoSchema.pre('save', function(next) {
 videoSchema.index({ uploadedBy: 1, organization: 1 });
 videoSchema.index({ status: 1, sensitivityStatus: 1 });
 
-export default mongoose.models.Video || mongoose.model('Video', videoSchema);
+// Clear cached model to force schema update in serverless environment
+if (mongoose.models.Video) {
+  delete mongoose.models.Video;
+}
+
+export default mongoose.model('Video', videoSchema);
