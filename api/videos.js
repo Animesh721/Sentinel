@@ -190,7 +190,6 @@ export default async function handler(req, res) {
       const video = await Video.create({
         filename: publicId,
         originalName,
-        cloudinaryUrl: '', // Will be updated after upload
         cloudinaryPublicId: publicId,
         size: size || 0,
         mimeType,
