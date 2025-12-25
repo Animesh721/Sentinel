@@ -2,7 +2,33 @@ import User from './models/User.js';
 import { connectDB } from './utils/db.js';
 import { authenticate, authorize } from './middleware/auth.js';
 
+// Helper to parse request body
+async function parseBody(req) {
+  if (req.body && typeof req.body === 'object') {
+    return req.body;
+  }
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type,Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   const { pathname } = new URL(req.url, `http://${req.headers.host}`);
 
   // Extract ID from path like /api/users/123/role
@@ -48,7 +74,8 @@ export default async function handler(req, res) {
         });
       });
 
-      const { role } = req.body;
+      const body = await parseBody(req);
+      const { role } = body;
 
       if (!['viewer', 'editor', 'admin'].includes(role)) {
         return res.status(400).json({ message: 'Invalid role' });

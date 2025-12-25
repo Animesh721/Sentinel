@@ -3,7 +3,34 @@ import User from './models/User.js';
 import { connectDB } from './utils/db.js';
 import { authenticateToken } from './middleware/auth.js';
 
+// Helper to parse request body
+async function parseBody(req) {
+  if (req.body && typeof req.body === 'object') {
+    return req.body;
+  }
+  // For serverless functions, body might be a string
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type,Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   const { pathname } = new URL(req.url, `http://${req.headers.host}`);
   const route = pathname.replace('/api/auth', '');
 
@@ -11,7 +38,8 @@ export default async function handler(req, res) {
   if (route === '/login' && req.method === 'POST') {
     try {
       await connectDB();
-      const { email, password } = req.body;
+      const body = await parseBody(req);
+      const { email, password } = body;
 
       if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required' });
@@ -55,7 +83,8 @@ export default async function handler(req, res) {
   if (route === '/register' && req.method === 'POST') {
     try {
       await connectDB();
-      const { username, email, password, organization } = req.body;
+      const body = await parseBody(req);
+      const { username, email, password, organization } = body;
 
       if (!username || !email || !password) {
         return res.status(400).json({ message: 'Username, email, and password are required' });

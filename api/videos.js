@@ -13,6 +13,21 @@ export const config = {
   },
 };
 
+// Helper to parse request body
+async function parseBody(req) {
+  if (req.body && typeof req.body === 'object') {
+    return req.body;
+  }
+  if (typeof req.body === 'string') {
+    try {
+      return JSON.parse(req.body);
+    } catch (e) {
+      return {};
+    }
+  }
+  return {};
+}
+
 async function processVideoAsync(videoId, organization) {
   try {
     const video = await Video.findById(videoId);
@@ -94,6 +109,17 @@ async function processVideoAsync(videoId, organization) {
 }
 
 export default async function handler(req, res) {
+  // Set CORS headers
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Access-Control-Allow-Methods', 'GET,POST,PUT,PATCH,DELETE,OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'X-Requested-With,Content-Type,Authorization');
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end();
+    return;
+  }
+
   const { pathname } = new URL(req.url, `http://${req.headers.host}`);
 
   // Extract ID and action from path
@@ -149,7 +175,8 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'Content-Type must be multipart/form-data' });
       }
 
-      const { buffer, originalName, mimeType, size } = req.body;
+      const body = await parseBody(req);
+      const { buffer, originalName, mimeType, size } = body;
 
       if (!buffer || !originalName) {
         return res.status(400).json({ message: 'File data is required' });
