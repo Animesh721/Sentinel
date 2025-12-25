@@ -34,6 +34,8 @@ export default async function handler(req, res) {
   const { pathname } = new URL(req.url, `http://${req.headers.host}`);
   const route = pathname.replace('/api/auth', '');
 
+  console.log('Auth API called:', { method: req.method, pathname, route });
+
   // LOGIN
   if (route === '/login' && req.method === 'POST') {
     try {
@@ -41,16 +43,22 @@ export default async function handler(req, res) {
       const body = await parseBody(req);
       const { email, password } = body;
 
+      console.log('Login attempt:', { email, hasPassword: !!password, bodyType: typeof req.body });
+
       if (!email || !password) {
         return res.status(400).json({ message: 'Email and password are required' });
       }
 
       const user = await User.findOne({ email });
+      console.log('User found:', !!user);
+
       if (!user) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
 
       const isPasswordValid = await user.comparePassword(password);
+      console.log('Password valid:', isPasswordValid);
+
       if (!isPasswordValid) {
         return res.status(401).json({ message: 'Invalid credentials' });
       }
