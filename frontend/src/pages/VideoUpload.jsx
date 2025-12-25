@@ -11,20 +11,18 @@ const VideoUpload = () => {
   const [success, setSuccess] = useState('');
   const [videoId, setVideoId] = useState(null);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const socket = useSocket();
+  const socketData = useSocket();
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (socket && videoId) {
-      socket.emit('video:subscribe', videoId);
-
-      socket.on('video:progress', (data) => {
+    if (socketData?.channel && videoId) {
+      const handleProgress = (data) => {
         if (data.videoId === videoId) {
           setProcessingProgress(data.progress);
         }
-      });
+      };
 
-      socket.on('video:complete', (data) => {
+      const handleComplete = (data) => {
         if (data.videoId === videoId) {
           setProcessingProgress(100);
           setSuccess('Video processed successfully!');
@@ -32,21 +30,25 @@ const VideoUpload = () => {
             navigate('/library');
           }, 2000);
         }
-      });
+      };
 
-      socket.on('video:error', (data) => {
+      const handleError = (data) => {
         if (data.videoId === videoId) {
           setError('Video processing failed: ' + data.error);
         }
-      });
+      };
+
+      socketData.channel.bind('video:progress', handleProgress);
+      socketData.channel.bind('video:complete', handleComplete);
+      socketData.channel.bind('video:error', handleError);
 
       return () => {
-        socket.off('video:progress');
-        socket.off('video:complete');
-        socket.off('video:error');
+        socketData.channel.unbind('video:progress', handleProgress);
+        socketData.channel.unbind('video:complete', handleComplete);
+        socketData.channel.unbind('video:error', handleError);
       };
     }
-  }, [socket, videoId, navigate]);
+  }, [socketData?.channel, videoId, navigate]);
 
   const handleFileChange = (e) => {
     const selectedFile = e.target.files[0];

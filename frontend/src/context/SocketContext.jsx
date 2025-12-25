@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { io } from 'socket.io-client';
+import Pusher from 'pusher-js';
 import { useAuth } from './AuthContext';
 
 const SocketContext = createContext();
@@ -11,42 +11,52 @@ export const useSocket = () => {
 };
 
 export const SocketProvider = ({ children }) => {
-  const { token, isAuthenticated } = useAuth();
-  const [socket, setSocket] = useState(null);
+  const { user, isAuthenticated } = useAuth();
+  const [pusher, setPusher] = useState(null);
+  const [channel, setChannel] = useState(null);
 
   useEffect(() => {
-    if (isAuthenticated && token) {
-      const newSocket = io('http://localhost:5000', {
-        auth: { token }
+    if (isAuthenticated && user?.organization) {
+      // Initialize Pusher
+      const pusherInstance = new Pusher(import.meta.env.VITE_PUSHER_KEY, {
+        cluster: import.meta.env.VITE_PUSHER_CLUSTER,
       });
 
-      newSocket.on('connect', () => {
-        console.log('Socket connected');
+      pusherInstance.connection.bind('connected', () => {
+        console.log('Pusher connected');
       });
 
-      newSocket.on('disconnect', () => {
-        console.log('Socket disconnected');
+      pusherInstance.connection.bind('disconnected', () => {
+        console.log('Pusher disconnected');
       });
 
-      newSocket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
+      pusherInstance.connection.bind('error', (error) => {
+        console.error('Pusher connection error:', error);
       });
 
-      setSocket(newSocket);
+      // Subscribe to organization channel
+      const orgChannel = pusherInstance.subscribe(`org-${user.organization}`);
+
+      setPusher(pusherInstance);
+      setChannel(orgChannel);
 
       return () => {
-        newSocket.close();
+        if (orgChannel) {
+          pusherInstance.unsubscribe(`org-${user.organization}`);
+        }
+        pusherInstance.disconnect();
       };
     } else {
-      if (socket) {
-        socket.close();
-        setSocket(null);
+      if (pusher) {
+        pusher.disconnect();
+        setPusher(null);
+        setChannel(null);
       }
     }
-  }, [isAuthenticated, token]);
+  }, [isAuthenticated, user?.organization]);
 
   return (
-    <SocketContext.Provider value={socket}>
+    <SocketContext.Provider value={{ pusher, channel }}>
       {children}
     </SocketContext.Provider>
   );
