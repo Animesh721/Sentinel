@@ -1,7 +1,7 @@
 import jwt from 'jsonwebtoken';
 import User from './models/User.js';
 import { connectDB } from './utils/db.js';
-import { authenticateToken } from './middleware/auth.js';
+import { authenticate } from './middleware/auth.js';
 
 // Helper to parse request body
 async function parseBody(req) {
@@ -138,10 +138,16 @@ export default async function handler(req, res) {
   // ME (Get current user)
   if (route === '/me' && req.method === 'GET') {
     try {
-      const authResult = await authenticateToken(req, res);
-      if (!authResult) return;
-
       await connectDB();
+
+      // Apply authentication middleware
+      await new Promise((resolve, reject) => {
+        authenticate(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
       const user = await User.findById(req.user.id).select('-password');
 
       if (!user) {
