@@ -78,51 +78,42 @@ const VideoUpload = () => {
     try {
       console.log('Starting file upload...', { name: file.name, size: file.size, type: file.type });
 
-      // Convert file to base64 for serverless upload
-      const reader = new FileReader();
-
-      const fileData = await new Promise((resolve, reject) => {
-        reader.onprogress = (e) => {
-          if (e.lengthComputable) {
-            const progress = Math.round((e.loaded / e.total) * 50);
-            setUploadProgress(progress);
-          }
-        };
-        reader.onload = () => {
-          const base64 = reader.result.split(',')[1]; // Remove data:video/...;base64, prefix
-          console.log('File converted to base64, length:', base64.length);
-          resolve(base64);
-        };
-        reader.onerror = (error) => {
-          console.error('FileReader error:', error);
-          reject(error);
-        };
-        reader.readAsDataURL(file);
-      });
-
-      setUploadProgress(50); // File read complete
-      console.log('Sending upload request...');
-
-      const response = await axios.post('/api/videos/upload', {
-        buffer: fileData,
+      // Step 1: Get upload URL from backend
+      console.log('Getting upload URL from backend...');
+      const urlResponse = await axios.post('/api/videos/upload-url', {
         originalName: file.name,
         mimeType: file.type,
         size: file.size
-      }, {
-        headers: {
-          'Content-Type': 'application/json'
-        },
+      });
+
+      const { uploadUrl, uploadPreset, publicId, videoId: newVideoId } = urlResponse.data;
+      setVideoId(newVideoId);
+      console.log('Got upload URL, uploading directly to Cloudinary...');
+
+      // Step 2: Upload directly to Cloudinary
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('upload_preset', uploadPreset);
+      formData.append('public_id', publicId);
+
+      const cloudinaryResponse = await axios.post(uploadUrl, formData, {
         onUploadProgress: (progressEvent) => {
           const percentCompleted = Math.round(
-            50 + (progressEvent.loaded * 50) / progressEvent.total
+            (progressEvent.loaded * 100) / progressEvent.total
           );
           console.log('Upload progress:', percentCompleted + '%');
           setUploadProgress(percentCompleted);
         }
       });
 
-      console.log('Upload response:', response.data);
-      setVideoId(response.data.video.id);
+      console.log('Cloudinary upload complete:', cloudinaryResponse.data);
+
+      // Step 3: Notify backend that upload is complete
+      console.log('Notifying backend of upload completion...');
+      await axios.post(`/api/videos/${newVideoId}/upload-complete`, {
+        cloudinaryData: cloudinaryResponse.data
+      });
+
       setSuccess('Video uploaded successfully! Processing...');
       setUploading(false);
     } catch (error) {

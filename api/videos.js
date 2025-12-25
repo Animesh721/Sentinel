@@ -153,8 +153,8 @@ export default async function handler(req, res) {
       return res.json({ videos });
     }
 
-    // POST /api/videos/upload - Upload video
-    if (videoId === 'upload' && req.method === 'POST') {
+    // POST /api/videos/upload-url - Get Cloudinary upload signature for direct upload
+    if (videoId === 'upload-url' && req.method === 'POST') {
       await new Promise((resolve, reject) => {
         authenticate(req, res, (err) => {
           if (err) reject(err);
@@ -171,18 +171,10 @@ export default async function handler(req, res) {
       });
 
       const body = await parseBody(req);
-      const { buffer, originalName, mimeType, size } = body;
+      const { originalName, mimeType, size } = body;
 
-      console.log('Upload request received:', {
-        hasBuffer: !!buffer,
-        originalName,
-        mimeType,
-        size,
-        bufferLength: buffer?.length
-      });
-
-      if (!buffer || !originalName) {
-        return res.status(400).json({ message: 'File data is required' });
+      if (!originalName) {
+        return res.status(400).json({ message: 'File name is required' });
       }
 
       const allowedTypes = ['video/mp4', 'video/webm', 'video/ogg', 'video/quicktime', 'video/x-msvideo'];
@@ -190,44 +182,80 @@ export default async function handler(req, res) {
         return res.status(400).json({ message: 'Invalid file type. Only video files are allowed.' });
       }
 
+      // Create video record in pending state
       const timestamp = Date.now();
       const randomSuffix = Math.random().toString(36).substring(2, 8);
-      const filename = `video-${timestamp}-${randomSuffix}`;
-
-      const fileBuffer = Buffer.from(buffer, 'base64');
-      const cloudinaryResult = await uploadVideoToCloudinary(fileBuffer, filename);
+      const publicId = `sentinel/videos/video-${timestamp}-${randomSuffix}`;
 
       const video = await Video.create({
-        filename: cloudinaryResult.public_id,
+        filename: publicId,
         originalName,
-        cloudinaryUrl: cloudinaryResult.secure_url,
-        cloudinaryPublicId: cloudinaryResult.public_id,
-        size: size || fileBuffer.length,
+        cloudinaryUrl: '', // Will be updated after upload
+        cloudinaryPublicId: publicId,
+        size: size || 0,
         mimeType,
-        duration: cloudinaryResult.duration || 0,
+        duration: 0,
         status: 'uploading',
         sensitivityStatus: 'pending',
         processingProgress: 0,
         uploadedBy: req.user._id,
         organization: req.user.organization,
-        metadata: {
-          width: cloudinaryResult.width,
-          height: cloudinaryResult.height,
-          format: cloudinaryResult.format
-        }
+        metadata: {}
       });
 
+      // Generate Cloudinary upload parameters
+      const cloudinary = (await import('cloudinary')).v2;
+      const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+      const uploadPreset = process.env.CLOUDINARY_UPLOAD_PRESET || 'ml_default';
+
+      const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/video/upload`;
+
+      return res.json({
+        videoId: video._id,
+        uploadUrl,
+        uploadPreset,
+        publicId,
+        cloudName
+      });
+    }
+
+    // POST /api/videos/:id/upload-complete - Mark upload as complete
+    if (action === 'upload-complete' && req.method === 'POST') {
+      await new Promise((resolve, reject) => {
+        authenticate(req, res, (err) => {
+          if (err) reject(err);
+          else resolve();
+        });
+      });
+
+      const body = await parseBody(req);
+      const { cloudinaryData } = body;
+
+      const video = await Video.findById(videoId);
+      if (!video) {
+        return res.status(404).json({ message: 'Video not found' });
+      }
+
+      // Update video with Cloudinary data
+      video.cloudinaryUrl = cloudinaryData.secure_url;
+      video.cloudinaryPublicId = cloudinaryData.public_id;
+      video.duration = cloudinaryData.duration || 0;
+      video.size = cloudinaryData.bytes || video.size;
+      video.metadata = {
+        width: cloudinaryData.width,
+        height: cloudinaryData.height,
+        format: cloudinaryData.format
+      };
+      await video.save();
+
+      // Start processing
       processVideoAsync(video._id.toString(), req.user.organization).catch(console.error);
 
-      return res.status(201).json({
-        message: 'Video uploaded successfully',
+      return res.json({
+        message: 'Upload complete',
         video: {
           id: video._id,
-          filename: video.filename,
-          originalName: video.originalName,
-          cloudinaryUrl: video.cloudinaryUrl,
-          status: video.status,
-          processingProgress: video.processingProgress
+          status: video.status
         }
       });
     }
