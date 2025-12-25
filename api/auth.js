@@ -3,7 +3,7 @@ import User from './models/User.js';
 import { connectDB } from './utils/db.js';
 import { authenticate } from './middleware/auth.js';
 
-// Helper to parse request body
+// Helper to parse request body for serverless functions
 async function parseBody(req) {
   if (req.body && typeof req.body === 'object') {
     return req.body;
