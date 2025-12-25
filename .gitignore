@@ -6,7 +6,9 @@ frontend/node_modules/
 # Environment variables
 .env
 backend/.env
+backend/api/.env
 frontend/.env
+api/.env
 
 # Uploads
 backend/uploads/
